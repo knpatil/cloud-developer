@@ -1,6 +1,8 @@
-import express from 'express';
+import express, {Request, Response} from 'express';
 import bodyParser from 'body-parser';
 import {filterImageFromURL, deleteLocalFiles} from './util/util';
+
+const isImageUrl = require('is-image-url');
 
 (async () => {
 
@@ -27,6 +29,34 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
   // RETURNS
   //   the filtered image file [!!TIP res.sendFile(filteredpath); might be useful]
 
+  // GET /filteredimage?image_url={{URL}}
+  app.get("/filteredimage", async (req: Request, res: Response) => {
+    let {image_url} = req.query
+
+    if (!image_url) {
+      return res.status(400).send(`image_url query parameter is required.`);
+    }
+
+    if (!isImageUrl(image_url)) {
+      return res.status(400).send(`image_url query parameter is not a valid url.`);
+    }
+
+    console.log("received url : " + image_url);
+
+    const filteredPath = await filterImageFromURL(image_url);
+
+    console.log("sending processed image ...");
+
+    res.status(200).sendFile(filteredPath, {}, (error) => {
+      if(error) {
+        res.status(422).send(`Couldn't process the image file!`);
+      }
+      console.log("deleting image from local path ...");
+      deleteLocalFiles([filteredPath]);
+    });
+
+  });
+  
   /**************************************************************************** */
 
   //! END @TODO1
